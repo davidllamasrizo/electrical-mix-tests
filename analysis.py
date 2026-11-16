@@ -136,7 +136,7 @@ def plot_pie(df):
         left=0.12,
         right=0.88
     )
-
+    ax.set_title("Electricity mix", pad=40)
     ax.axis("equal")
 
     plt.show()
