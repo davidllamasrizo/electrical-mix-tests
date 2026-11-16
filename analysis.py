@@ -82,8 +82,8 @@ def plot_pie(df):
     ]
 
     labels = [
-        "Nuclear", "Hydro", "Wind", "Solar", "Gas", "Storage"
-    ]
+    "Nuclear", "Hydro", "Wind", "Solar", "Gas", "\nStorage"
+]
 
     for column in columns:
         if column not in df.columns:
