@@ -100,19 +100,16 @@ def plot_pie(df):
 
     # Create the pie chart
     wedges, texts, autotexts = ax.pie(
-        annual_energy,
-        labels=labels,
-        autopct="%1.1f%%",
-        startangle=90,
-        radius=1.0,
-        labeldistance=1.10,
-        pctdistance=0.70,
-        textprops={"fontsize": 15},
-        wedgeprops={
-            "edgecolor": "white",
-            "linewidth": 2
-        }
-    )
+    annual_energy,
+    labels=labels,
+    autopct="%1.1f%%",
+    startangle=90,
+    radius=1.0,
+    labeldistance=0.90,
+    pctdistance=0.65,
+    textprops={"fontsize": 16, "fontweight": "bold"},
+    wedgeprops={"edgecolor": "white", "linewidth": 2}
+)
 
     # Make technology names larger and bold
     for text in texts:
