@@ -71,6 +71,7 @@ def spared_pct(df) -> float:
     return float(surplus_percentage)
 
 
+
 def plot_pie(df):
     """Plot the annual contribution of each technology and storage."""
 
@@ -93,15 +94,33 @@ def plot_pie(df):
     if total_energy == 0:
         raise ValueError("Total energy supplied cannot be zero.")
 
-    plt.figure(figsize=(9, 7))
-    plt.pie(
-        annual_energy,
-        labels=labels,
-        autopct="%1.1f%%",
-        startangle=90
-    )
-    plt.title("Annual Electricity Supply Mix")
-    plt.axis("equal")
-    plt.tight_layout()
-    plt.show()
+    fig, ax = plt.subplots(figsize=(10, 7))
 
+    wedges, texts, autotexts = ax.pie(
+        annual_energy,
+        labels=None,
+        autopct="%1.1f%%",
+        startangle=90,
+        pctdistance=0.75,
+        radius=0.85,
+        textprops={"fontsize": 10}
+    )
+
+    ax.legend(
+        wedges,
+        labels,
+        title="Energy sources",
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+        fontsize=10
+    )
+
+    ax.set_title(
+        "Annual Electricity Supply Mix",
+        fontsize=15,
+        pad=25
+    )
+
+    ax.axis("equal")
+    fig.tight_layout()
+    plt.show()
