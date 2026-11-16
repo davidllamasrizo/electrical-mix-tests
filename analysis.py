@@ -105,7 +105,7 @@ def plot_pie(df):
     autopct="%1.1f%%",
     startangle=90,
     radius=1.0,
-    labeldistance=0.90,
+    labeldistance=0.20,
     pctdistance=0.65,
     textprops={"fontsize": 16, "fontweight": "bold"},
     wedgeprops={"edgecolor": "white", "linewidth": 2}
