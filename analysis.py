@@ -72,6 +72,7 @@ def spared_pct(df) -> float:
 
 
 
+
 def plot_pie(df):
     """Plot the annual contribution of each technology and storage."""
 
@@ -94,33 +95,52 @@ def plot_pie(df):
     if total_energy == 0:
         raise ValueError("Total energy supplied cannot be zero.")
 
-    fig, ax = plt.subplots(figsize=(10, 7))
+    # Create a larger figure
+    fig, ax = plt.subplots(figsize=(12, 9))
 
+    # Create the pie chart
     wedges, texts, autotexts = ax.pie(
         annual_energy,
-        labels=None,
+        labels=labels,
         autopct="%1.1f%%",
         startangle=90,
-        pctdistance=0.75,
-        radius=0.85,
-        textprops={"fontsize": 10}
+        radius=1.0,
+        labeldistance=1.10,
+        pctdistance=0.70,
+        textprops={"fontsize": 15},
+        wedgeprops={
+            "edgecolor": "white",
+            "linewidth": 2
+        }
     )
 
-    ax.legend(
-        wedges,
-        labels,
-        title="Energy sources",
-        loc="center left",
-        bbox_to_anchor=(1, 0.5),
-        fontsize=10
-    )
+    # Make technology names larger and bold
+    for text in texts:
+        text.set_fontsize(15)
+        text.set_fontweight("bold")
 
-    ax.set_title(
+    # Make percentages larger and bold
+    for autotext in autotexts:
+        autotext.set_fontsize(14)
+        autotext.set_fontweight("bold")
+
+    # Add a separate title above the chart
+    fig.suptitle(
         "Annual Electricity Supply Mix",
-        fontsize=15,
-        pad=25
+        fontsize=22,
+        fontweight="bold",
+        y=0.97
+    )
+
+    # Reserve space between the title and the chart
+    fig.subplots_adjust(
+        top=0.82,
+        bottom=0.08,
+        left=0.12,
+        right=0.88
     )
 
     ax.axis("equal")
-    fig.tight_layout()
+
     plt.show()
+
