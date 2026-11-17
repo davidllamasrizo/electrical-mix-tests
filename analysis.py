@@ -76,68 +76,51 @@ def spared_pct(df) -> float:
 def plot_pie(df):
     """Plot the annual contribution of each technology and storage."""
 
+    # Define the columns and labels for the pie chart
     columns = [
-        "nuclear", "hydro", "wind", "solar", "gas",
+        "nuclear",
+        "hydro",
+        "wind",
+        "solar",
+        "gas",
         "battery_discharge"
     ]
 
     labels = [
-    "Nuclear", "Hydro", "Wind", "Solar", "Gas", "\nStorage"
-]
+        "Nuclear",
+        "Hydro",
+        "Wind",
+        "Solar",
+        "Gas",
+        "Storage"
+    ]
 
+    # Check that all required columns exist
     for column in columns:
         if column not in df.columns:
             raise ValueError(f"Missing column: {column}")
 
+    # Calculate annual energy supplied by each source
     annual_energy = df[columns].sum()
+
+    # Calculate total electricity supplied
     total_energy = annual_energy.sum()
 
     if total_energy == 0:
         raise ValueError("Total energy supplied cannot be zero.")
 
-    # Create a larger figure
-    fig, ax = plt.subplots(figsize=(12, 9))
+    # Create pie chart
+    plt.figure(figsize=(9, 7))
 
-    # Create the pie chart
-    wedges, texts, autotexts = ax.pie(
-    annual_energy,
-    labels=labels,
-    autopct="%1.1f%%",
-    startangle=90,
-    radius=1.0,
-    labeldistance=0.20,
-    pctdistance=0.65,
-    textprops={"fontsize": 16, "fontweight": "bold"},
-    wedgeprops={"edgecolor": "white", "linewidth": 2}
-)
-
-    # Make technology names larger and bold
-    for text in texts:
-        text.set_fontsize(15)
-        text.set_fontweight("bold")
-
-    # Make percentages larger and bold
-    for autotext in autotexts:
-        autotext.set_fontsize(14)
-        autotext.set_fontweight("bold")
-
-    # Add a separate title above the chart
-    fig.suptitle(
-        "Annual Electricity Supply Mix",
-        fontsize=22,
-        fontweight="bold",
-        y=0.97
+    plt.pie(
+        annual_energy,
+        labels=labels,
+        autopct="%1.1f%%",
+        startangle=90
     )
 
-    # Reserve space between the title and the chart
-    fig.subplots_adjust(
-        top=0.82,
-        bottom=0.08,
-        left=0.12,
-        right=0.88
-    )
-    ax.set_title("Electricity mix", pad=40)
-    ax.axis("equal")
+    plt.title("Annual Electricity Supply Mix")
+    plt.axis("equal")
+    plt.tight_layout()
 
     plt.show()
-
