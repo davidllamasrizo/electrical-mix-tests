@@ -102,101 +102,76 @@ def spared_pct(df) -> float:
     return float(surplus_percentage)
 
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+def plot_week(df, demand, start_hour=0):
 
-
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
-
-
-def plot_week(df, demand, start_hour):
-    """
-    Plot electricity generation, battery operation,
-    demand and battery storage over one selected week.
-    
-    Left axis: Power (GW)
-    Right axis: Stored energy (GWh)
-    """
-
-    # 1. Validate inputs
+    # =====================================================
+    # 1. CHECK DATA
+    # =====================================================
 
     required_columns = [
-        "nuclear", "hydro", "wind", "solar", "gas",
-        "battery_charge", "battery_discharge", "soc"
+        "nuclear",
+        "hydro",
+        "wind",
+        "solar",
+        "gas",
+        "battery_charge",
+        "battery_discharge",
+        "soc"
     ]
 
-    for col in required_columns:
-        if col not in df.columns:
-            raise ValueError(f"Missing column: {col}")
+    for column in required_columns:
+        if column not in df.columns:
+            raise ValueError(f"Missing column: {column}")
 
-    demand = np.asarray(demand, dtype=float)
-
-    if len(demand) != len(df):
-        raise ValueError("Demand and df must have the same length.")
-
-    if not isinstance(start_hour, (int, np.integer)):
-        raise TypeError("start_hour must be an integer.")
-
-    if start_hour < 0 or start_hour + 168 > len(df):
-        raise ValueError("Not enough hours for one week.")
-
-    if not np.all(np.isfinite(demand)) or np.any(demand < 0):
-        raise ValueError("Demand contains invalid values.")
-
-    # Check storage capacity
-
-    C_storage = df.attrs.get("C_storage")
-
-    if C_storage is None or not np.isfinite(C_storage) or C_storage < 0:
-        raise ValueError("Valid C_storage not found in df.attrs.")
-
-    # 2. Select the 168 hours
-
+    # Select 168 hours (one week)
     end_hour = start_hour + 168
 
+    if end_hour > len(df):
+        raise ValueError("Not enough data for a complete 168-hour week.")
+
     week = df.iloc[start_hour:end_hour]
-    week_demand = demand[start_hour:end_hour]
+
+    # Demand can be passed as a separate array or Series
+    demand_week = np.asarray(demand)[start_hour:end_hour]
+
+    if len(demand_week) != 168:
+        raise ValueError("Demand must contain 168 values for the selected week.")
+
+    # =====================================================
+    # 2. POWER DATA (kW)
+    # =====================================================
+
+    nuclear = week["nuclear"].to_numpy()
+    hydro = week["hydro"].to_numpy()
+    wind = week["wind"].to_numpy()
+    solar = week["solar"].to_numpy()
+    gas = week["gas"].to_numpy()
+
+    battery_discharge = week["battery_discharge"].to_numpy()
+    battery_charge = week["battery_charge"].to_numpy()
+
+    # Represent charging as negative power
+    battery_charge_negative = -battery_charge
+
+    # Storage energy (kWh)
+    C_storage = df.attrs.get("C_storage")
+
+    if C_storage is None:
+        raise ValueError("C_storage is missing from df.attrs.")
+
+    storage = week["soc"].to_numpy() * C_storage
+
+    # =====================================================
+    # 3. CREATE FIGURE
+    # =====================================================
+
+    fig, ax = plt.subplots(figsize=(15, 6))
 
     hours = np.arange(168)
 
-    # 3. Convert power from kW to GW
-
-    nuclear = week["nuclear"].to_numpy(dtype=float) / 1_000_000
-    hydro = week["hydro"].to_numpy(dtype=float) / 1_000_000
-    wind = week["wind"].to_numpy(dtype=float) / 1_000_000
-    solar = week["solar"].to_numpy(dtype=float) / 1_000_000
-    gas = week["gas"].to_numpy(dtype=float) / 1_000_000
-
-    battery_discharge = (
-        week["battery_discharge"].to_numpy(dtype=float) / 1_000_000
-    )
-
-    battery_charge = (
-        week["battery_charge"].to_numpy(dtype=float) / 1_000_000
-    )
-
-    demand_GW = week_demand / 1_000_000
-
-    # 4. Calculate stored energy in GWh
-
-    # SOC is a fraction between 0 and 1.
-    # C_storage is expressed in kWh.
-    # Divide by 1,000,000 to convert kWh into GWh.
-
-    storage_GWh = (
-        week["soc"].to_numpy(dtype=float) * C_storage / 1_000_000
-    )
-
-    # 5. Create the figure
-
-    fig, ax = plt.subplots(figsize=(14, 7))
-
-    # 6. Plot generation and battery discharge
+    # =====================================================
+    # 4. GENERATION STACKPLOT
+    # =====================================================
 
     ax.stackplot(
         hours,
@@ -217,68 +192,75 @@ def plot_week(df, demand, start_hour):
         alpha=0.8
     )
 
-    # 7. Plot battery charging below zero
-
+    # Battery charging below zero
     ax.fill_between(
         hours,
         0,
-        -battery_charge,
-        color="deeppink",
-        alpha=0.6,
-        label="Battery charge"
+        battery_charge_negative,
+        label="Battery charge",
+        alpha=0.6
     )
 
-    # 8. Plot electricity demand
+    # =====================================================
+    # 5. DEMAND LINE (RED)
+    # =====================================================
 
     ax.plot(
         hours,
-        demand_GW,
-        color="black",
+        demand_week,
+        color="red",
         linewidth=2,
-        label="Demand"
+        label="Demand",
+        zorder=5
     )
 
-    # 9. Create secondary axis for battery storage
+    # =====================================================
+    # 6. STORAGE LINE (BLACK) - RIGHT AXIS
+    # =====================================================
 
     ax2 = ax.twinx()
 
     ax2.plot(
         hours,
-        storage_GWh,
-        color="purple",
+        storage,
+        color="black",
         linewidth=2,
-        label="Storage"
+        linestyle="-",
+        label="Storage",
+        zorder=6
     )
 
-    # 10. Configure axes
+    # =====================================================
+    # 7. LABELS AND TITLE
+    # =====================================================
 
-    ax.set_title(
-        f"Electricity Generation, Battery Operation and Storage "
-        f"(Hours {start_hour}-{end_hour - 1})"
-    )
+    ax.set_title("Electricity Dispatch - One Week")
 
-    ax.set_xlabel("Day of the week")
-    ax.set_ylabel("Power (GW)")
-    ax2.set_ylabel("Storage (GWh)")
+    ax.set_xlabel("Hour")
+    ax.set_ylabel("Power (kW)")
+    ax2.set_ylabel("Stored energy (kWh)")
 
-    ax.set_xticks(np.arange(0, 168, 24))
-    ax.set_xticklabels([f"Day {i+1}" for i in range(7)])
+    ax.set_xlim(0, 167)
+    ax.set_xticks(np.arange(0, 168, 12))
 
-    # 11. Combine legends from both axes
+    ax.grid(axis="y", alpha=0.3)
 
-    lines1, labels1 = ax.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
+    # =====================================================
+    # 8. COMBINED LEGEND
+    # =====================================================
+
+    handles1, labels1 = ax.get_legend_handles_labels()
+    handles2, labels2 = ax2.get_legend_handles_labels()
 
     ax.legend(
-        lines1 + lines2,
+        handles1 + handles2,
         labels1 + labels2,
         loc="upper left",
-        ncol=4
+        ncol=2,
+        fontsize=9
     )
 
-    ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
+    fig.tight_layout()
 
     return fig
 
