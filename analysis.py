@@ -101,31 +101,23 @@ def spared_pct(df) -> float:
 
     return float(surplus_percentage)
 
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
 def plot_week(df, demand, start_hour):
     """
-    Plot electricity generation and demand over one selected week.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Hourly dispatch results from dispatch().
-
-    demand : array-like
-        Hourly electricity demand in kW.
-
-    start_hour : int
-        First hour of the selected week.
-
-    Returns
-    -------
-    fig : matplotlib.figure.Figure
-        Weekly electricity generation and demand plot.
+    Plot electricity generation, battery operation and demand
+    over one selected week (168 hours).
     """
 
     # 1. Validate inputs
 
     required_columns = [
-        "nuclear", "hydro", "wind", "solar", "gas"
+        "nuclear", "hydro", "wind", "solar", "gas",
+        "battery_charge", "battery_discharge"
     ]
 
     for col in required_columns:
@@ -165,11 +157,22 @@ def plot_week(df, demand, start_hour):
     solar = week["solar"].to_numpy() / 1000
     gas = week["gas"].to_numpy() / 1000
 
+    battery_discharge = (
+        week["battery_discharge"].to_numpy() / 1000
+    )
+
+    battery_charge = (
+        week["battery_charge"].to_numpy() / 1000
+    )
+
     demand_MW = week_demand / 1000
 
-    # 4. Plot generation and demand
+    # 4. Create the plot
 
     fig, ax = plt.subplots(figsize=(14, 6))
+
+    # Positive electricity supply:
+    # generation sources + battery discharge
 
     ax.stackplot(
         hours,
@@ -178,9 +181,29 @@ def plot_week(df, demand, start_hour):
         wind,
         solar,
         gas,
-        labels=["Nuclear", "Hydro", "Wind", "Solar", "Gas"],
+        battery_discharge,
+        labels=[
+            "Nuclear",
+            "Hydro",
+            "Wind",
+            "Solar",
+            "Gas",
+            "Battery discharge"
+        ],
         alpha=0.8
     )
+
+    # Negative area: battery charging consumes electricity
+
+    ax.fill_between(
+        hours,
+        0,
+        -battery_charge,
+        label="Battery charge",
+        alpha=0.8
+    )
+
+    # Demand line
 
     ax.plot(
         hours,
@@ -190,10 +213,12 @@ def plot_week(df, demand, start_hour):
         label="Demand"
     )
 
-    # 5. Configure plot
+    # 5. Configure the plot
+
+    ax.axhline(0, color="black", linewidth=0.8)
 
     ax.set_title(
-        f"Electricity Generation and Demand "
+        f"Electricity Generation, Battery Operation and Demand "
         f"(Hours {start_hour}-{end_hour - 1})"
     )
 
