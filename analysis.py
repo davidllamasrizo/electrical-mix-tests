@@ -113,17 +113,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
+
 def plot_week(df, demand, start_hour):
     """
-    Plot electricity generation, battery charge/discharge
-    and demand over one selected week (168 hours).
+    Plot electricity generation, battery operation,
+    demand and battery storage over one selected week.
+    
+    Left axis: Power (GW)
+    Right axis: Stored energy (GWh)
     """
 
     # 1. Validate inputs
 
     required_columns = [
         "nuclear", "hydro", "wind", "solar", "gas",
-        "battery_charge", "battery_discharge"
+        "battery_charge", "battery_discharge", "soc"
     ]
 
     for col in required_columns:
@@ -144,29 +148,55 @@ def plot_week(df, demand, start_hour):
     if not np.all(np.isfinite(demand)) or np.any(demand < 0):
         raise ValueError("Demand contains invalid values.")
 
-    # 2. Select the week
+    # Check storage capacity
 
-    week = df.iloc[start_hour:start_hour + 168]
-    week_demand = demand[start_hour:start_hour + 168]
+    C_storage = df.attrs.get("C_storage")
+
+    if C_storage is None or not np.isfinite(C_storage) or C_storage < 0:
+        raise ValueError("Valid C_storage not found in df.attrs.")
+
+    # 2. Select the 168 hours
+
+    end_hour = start_hour + 168
+
+    week = df.iloc[start_hour:end_hour]
+    week_demand = demand[start_hour:end_hour]
 
     hours = np.arange(168)
 
-    # 3. Convert kW to MW
+    # 3. Convert power from kW to GW
 
-    nuclear = week["nuclear"].to_numpy() / 1000
-    hydro = week["hydro"].to_numpy() / 1000
-    wind = week["wind"].to_numpy() / 1000
-    solar = week["solar"].to_numpy() / 1000
-    gas = week["gas"].to_numpy() / 1000
+    nuclear = week["nuclear"].to_numpy(dtype=float) / 1_000_000
+    hydro = week["hydro"].to_numpy(dtype=float) / 1_000_000
+    wind = week["wind"].to_numpy(dtype=float) / 1_000_000
+    solar = week["solar"].to_numpy(dtype=float) / 1_000_000
+    gas = week["gas"].to_numpy(dtype=float) / 1_000_000
 
-    battery_discharge = week["battery_discharge"].to_numpy() / 1000
-    battery_charge = week["battery_charge"].to_numpy() / 1000
+    battery_discharge = (
+        week["battery_discharge"].to_numpy(dtype=float) / 1_000_000
+    )
 
-    demand_MW = week_demand / 1000
+    battery_charge = (
+        week["battery_charge"].to_numpy(dtype=float) / 1_000_000
+    )
 
-    # 4. Plot all energy sources
+    demand_GW = week_demand / 1_000_000
 
-    fig, ax = plt.subplots(figsize=(14, 6))
+    # 4. Calculate stored energy in GWh
+
+    # SOC is a fraction between 0 and 1.
+    # C_storage is expressed in kWh.
+    # Divide by 1,000,000 to convert kWh into GWh.
+
+    storage_GWh = (
+        week["soc"].to_numpy(dtype=float) * C_storage / 1_000_000
+    )
+
+    # 5. Create the figure
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+
+    # 6. Plot generation and battery discharge
 
     ax.stackplot(
         hours,
@@ -187,41 +217,65 @@ def plot_week(df, demand, start_hour):
         alpha=0.8
     )
 
-    # 5. Plot battery charging
+    # 7. Plot battery charging below zero
 
     ax.fill_between(
         hours,
         0,
-        battery_charge,
-        color="grey",
-        alpha=0.5,
+        -battery_charge,
+        color="deeppink",
+        alpha=0.6,
         label="Battery charge"
     )
 
-    # 6. Plot demand
+    # 8. Plot electricity demand
 
     ax.plot(
         hours,
-        demand_MW,
+        demand_GW,
         color="black",
         linewidth=2,
         label="Demand"
     )
 
-    # 7. Configure plot
+    # 9. Create secondary axis for battery storage
+
+    ax2 = ax.twinx()
+
+    ax2.plot(
+        hours,
+        storage_GWh,
+        color="purple",
+        linewidth=2,
+        label="Storage"
+    )
+
+    # 10. Configure axes
 
     ax.set_title(
-        f"Electricity Generation and Battery Operation "
-        f"(Hours {start_hour}-{start_hour + 167})"
+        f"Electricity Generation, Battery Operation and Storage "
+        f"(Hours {start_hour}-{end_hour - 1})"
     )
 
     ax.set_xlabel("Day of the week")
-    ax.set_ylabel("Power (MW)")
+    ax.set_ylabel("Power (GW)")
+    ax2.set_ylabel("Storage (GWh)")
 
     ax.set_xticks(np.arange(0, 168, 24))
     ax.set_xticklabels([f"Day {i+1}" for i in range(7)])
 
-    ax.legend(loc="upper left", ncol=3)
+    # 11. Combine legends from both axes
+
+    lines1, labels1 = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+
+    ax.legend(
+        lines1 + lines2,
+        labels1 + labels2,
+        loc="upper left",
+        ncol=4
+    )
+
     ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
