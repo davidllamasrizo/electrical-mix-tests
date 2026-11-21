@@ -107,10 +107,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
 def plot_week(df, demand, start_hour):
     """
-    Plot electricity generation, battery operation and demand
-    over one selected week (168 hours).
+    Plot electricity generation, battery charge/discharge
+    and demand over one selected week (168 hours).
     """
 
     # 1. Validate inputs
@@ -133,19 +139,15 @@ def plot_week(df, demand, start_hour):
         raise TypeError("start_hour must be an integer.")
 
     if start_hour < 0 or start_hour + 168 > len(df):
-        raise ValueError(
-            "Invalid start_hour: not enough hours for one week."
-        )
+        raise ValueError("Not enough hours for one week.")
 
     if not np.all(np.isfinite(demand)) or np.any(demand < 0):
         raise ValueError("Demand contains invalid values.")
 
-    # 2. Select the 168 hours
+    # 2. Select the week
 
-    end_hour = start_hour + 168
-
-    week = df.iloc[start_hour:end_hour]
-    week_demand = demand[start_hour:end_hour]
+    week = df.iloc[start_hour:start_hour + 168]
+    week_demand = demand[start_hour:start_hour + 168]
 
     hours = np.arange(168)
 
@@ -157,22 +159,14 @@ def plot_week(df, demand, start_hour):
     solar = week["solar"].to_numpy() / 1000
     gas = week["gas"].to_numpy() / 1000
 
-    battery_discharge = (
-        week["battery_discharge"].to_numpy() / 1000
-    )
-
-    battery_charge = (
-        week["battery_charge"].to_numpy() / 1000
-    )
+    battery_discharge = week["battery_discharge"].to_numpy() / 1000
+    battery_charge = week["battery_charge"].to_numpy() / 1000
 
     demand_MW = week_demand / 1000
 
-    # 4. Create the plot
+    # 4. Plot all energy sources
 
     fig, ax = plt.subplots(figsize=(14, 6))
-
-    # Positive electricity supply:
-    # generation sources + battery discharge
 
     ax.stackplot(
         hours,
@@ -193,17 +187,18 @@ def plot_week(df, demand, start_hour):
         alpha=0.8
     )
 
-    # Negative area: battery charging consumes electricity
+    # 5. Plot battery charging
 
     ax.fill_between(
         hours,
         0,
-        -battery_charge,
-        label="Battery charge",
-        alpha=0.8
+        battery_charge,
+        color="grey",
+        alpha=0.5,
+        label="Battery charge"
     )
 
-    # Demand line
+    # 6. Plot demand
 
     ax.plot(
         hours,
@@ -213,13 +208,11 @@ def plot_week(df, demand, start_hour):
         label="Demand"
     )
 
-    # 5. Configure the plot
-
-    ax.axhline(0, color="black", linewidth=0.8)
+    # 7. Configure plot
 
     ax.set_title(
-        f"Electricity Generation, Battery Operation and Demand "
-        f"(Hours {start_hour}-{end_hour - 1})"
+        f"Electricity Generation and Battery Operation "
+        f"(Hours {start_hour}-{start_hour + 167})"
     )
 
     ax.set_xlabel("Day of the week")
@@ -234,6 +227,7 @@ def plot_week(df, demand, start_hour):
     plt.tight_layout()
 
     return fig
+
 
 def plot_pie(df, save_path=None):
     """Plot the annual contribution of each technology and storage.
