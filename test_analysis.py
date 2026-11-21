@@ -186,6 +186,20 @@ print("PASS: spared_pct()")
 # =====================================================
 # 7. TEST plot_week()
 # =====================================================
+print("Columnas disponibles:")
+print(df_full.columns.tolist())
+
+print("\nCarga total de batería:")
+print(df_full["battery_charge"].sum())
+
+print("\nDescarga total de batería:")
+print(df_full["battery_discharge"].sum())
+
+print("\nCarga máxima:")
+print(df_full["battery_charge"].max())
+
+print("\nDescarga máxima:")
+print(df_full["battery_discharge"].max())
 
 print("\n[5] Testing plot_week()")
 
